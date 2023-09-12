@@ -24,6 +24,7 @@ type Config struct {
 func CreateConfig() *Config {
 	return &Config{
 		//AddCurrentBodyToNew: false,
+		NewBodyValues:  make(map[int]map[string]string),
 		NewContentType: "application/x-www-form-urlencoded",
 		//TransformerQueryParameterName:         "transformer",
 		//JSONTransformFieldName:                "data",
