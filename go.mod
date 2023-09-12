@@ -1,3 +1,3 @@
-module github.com/PongDev/traefikbodytransform
+module github.com/Eva-Music/traefikbodywrite
 
 go 1.19

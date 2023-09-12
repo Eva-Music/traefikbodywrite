@@ -1,5 +1,5 @@
-// Package traefikbodytransform plugin.
-package traefikbodytransform
+// Package traefikbodywrite plugin.
+package traefikbodywrite
 
 import (
 	"context"

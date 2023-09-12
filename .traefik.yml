@@ -1,12 +1,15 @@
-displayName: BodyTransformerMiddleware Plugin
+displayName: BodyWriteMiddleware Plugin
 type: middleware
 iconPath: .assets/icon.png
 
-import: github.com/PongDev/traefikbodytransform
+import: github.com/Eva-Music/traefikbodywrite
 
-summary: "[BodyTransformerMiddleware] Modified request body from query string"
+summary: "[BodyWriteMiddleware] Modified request body from query string"
 
 testData:
-  transformerQueryParameterName: "transform"
-  jsonTransformFieldName: "data"
-  tokenTransformQueryParameterFieldName: "token"
+  newBodyValues: {
+    1: { "grant_type": "password" },
+    2: { "client_id": "id" },
+    3: { "client_secret": "secret" },
+  }
+  newContentType: "application/x-www-form-urlencoded"
