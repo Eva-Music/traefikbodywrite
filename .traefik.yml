@@ -1,0 +1,12 @@
+displayName: BodyTransformerMiddleware Plugin
+type: middleware
+iconPath: .assets/icon.png
+
+import: github.com/PongDev/traefikbodytransform
+
+summary: "[BodyTransformerMiddleware] Modified request body from query string"
+
+testData:
+  transformerQueryParameterName: "transform"
+  jsonTransformFieldName: "data"
+  tokenTransformQueryParameterFieldName: "token"
