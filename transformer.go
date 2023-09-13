@@ -72,20 +72,34 @@ func (a *transformer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	newBody["grant_type"] = a.config.GrantType
 
 	// add headers to new body
-	usernameHeader := req.Header.Get("username")
-	passwordHeader := req.Header.Get("password")
+	//usernameHeader := req.Header.Get("username")
+	//passwordHeader := req.Header.Get("password")
 
-	if usernameHeader == "" {
-		http.Error(rw, "username header missing", http.StatusInternalServerError)
+	//if usernameHeader == "" {
+	//	http.Error(rw, "username header missing", http.StatusInternalServerError)
+	//}
+	//newBody["username"] = usernameHeader
+	//req.Header.Del("username")
+	//
+	//if passwordHeader == "" {
+	//	http.Error(rw, "password header missing", http.StatusInternalServerError)
+	//}
+	//newBody["password"] = passwordHeader
+	//req.Header.Del("password")
+
+	h := req.Header.Values("username")
+
+	usernameHeader, okUser := req.Header["username"]
+	if !okUser {
+		http.Error(rw, "username header missing "+h[0], http.StatusInternalServerError)
 	}
-	newBody["username"] = usernameHeader
-	req.Header.Del("username")
+	newBody["username"] = usernameHeader[0]
 
-	if passwordHeader == "" {
+	passwordHeader, okPass := req.Header["password"]
+	if !okPass {
 		http.Error(rw, "password header missing", http.StatusInternalServerError)
 	}
-	newBody["password"] = passwordHeader
-	req.Header.Del("password")
+	newBody["password"] = passwordHeader[0]
 
 	req.Header.Set("Content-Type", a.config.NewContentType)
 	jsonBody, err := json.Marshal(newBody)
