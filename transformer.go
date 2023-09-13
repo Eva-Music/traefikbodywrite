@@ -91,7 +91,7 @@ func (a *transformer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	usernameHeader, okUser := req.Header["username"]
 	if !okUser {
-		http.Error(rw, "username header missing "+h[0], http.StatusInternalServerError)
+		http.Error(rw, "username header missing 1"+h[0], http.StatusInternalServerError)
 	}
 	newBody["username"] = usernameHeader[0]
 
