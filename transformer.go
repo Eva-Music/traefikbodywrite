@@ -4,6 +4,7 @@ package traefikbodywrite
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -11,48 +12,43 @@ import (
 )
 
 // Config the plugin configuration.
+
+//type NewBody struct {
+//	NewKey   string `json:"newKey,omitempty"`
+//	NewValue string `json:"newValue,omitempty"`
+//}
+
 type Config struct {
-	NewBodyValues map[int]map[string]string `json:"newBodyValues,omitempty"`
-	//AddCurrentBodyToNew bool                      `json:"addCurrentBodyToNew,omitempty"`
+	//NewBodyContent []NewBody
 	NewContentType string `json:"newContentType,omitempty"`
-	//TransformerQueryParameterName         string `json:"transformerQueryParameterName,omitempty"`
-	//JSONTransformFieldName                string `json:"jsonTransformFieldName,omitempty"`
-	//TokenTransformQueryParameterFieldName string `json:"tokenTransformQueryParameterFieldName,omitempty"`
+	ClientId       string `json:"clientId,omitempty"`
+	ClientSecret   string `json:"clientSecret,omitempty"`
+	GrantType      string `json:"grantType,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		//AddCurrentBodyToNew: false,
-		NewBodyValues:  make(map[int]map[string]string),
+		//NewBodyContent: []NewBody{},
 		NewContentType: "application/x-www-form-urlencoded",
-		//TransformerQueryParameterName:         "transformer",
-		//JSONTransformFieldName:                "data",
-		//TokenTransformQueryParameterFieldName: "token",
 	}
 }
 
 // transformer plugin.
 type transformer struct {
-	next          http.Handler
-	newBodyValues map[int]map[string]string
-	//addCurrentBodyToNew bool
-	newContentType string
-	//transformerQueryParameterName         string
-	//jsonTransformFieldName                string
-	//tokenTransformQueryParameterFieldName string
+	next   http.Handler
+	config Config
 }
 
 // New created a new transformer plugin.
 func New(_ context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
+	if config.ClientSecret == "" && config.ClientId == "" && config.GrantType == "" {
+		return nil, fmt.Errorf("some required fields are empty")
+	}
+
 	return &transformer{
-		next:          next,
-		newBodyValues: config.NewBodyValues,
-		//addCurrentBodyToNew: config.AddCurrentBodyToNew,
-		newContentType: config.NewContentType,
-		//transformerQueryParameterName:         config.TransformerQueryParameterName,
-		//jsonTransformFieldName:                config.JSONTransformFieldName,
-		//tokenTransformQueryParameterFieldName: config.TokenTransformQueryParameterFieldName,
+		next:   next,
+		config: *config,
 	}, nil
 }
 
@@ -63,59 +59,35 @@ func (a *transformer) log(format string) {
 	}
 }
 
-//type PayloadInput struct {
-//	Host       string                 `json:"host"`
-//	Method     string                 `json:"method"`
-//	Path       []string               `json:"path"`
-//	Parameters url.Values             `json:"parameters"`
-//	Headers    map[string][]string    `json:"headers"`
-//	Body       map[string]interface{} `json:"body,omitempty"`
-//	Form       url.Values             `json:"form,omitempty"`
-//}
+//newBodyContent:
+//   - newKey: "client_id"
+//     newValue: SerialNumber%3D
 
-//	1:
-//		"dfg":"sdfg"
-//	2:
-//		"dfg":"dfvg"
-
-// - достать новые значения для body
-// - узнать нужно ли достать старые значения из запроса из body
-// - добавить нужный content-type
 func (a *transformer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	newBody := make(map[string]string)
 
-	//create new body from newBodyValues
-	for _, m := range a.newBodyValues {
-		for k, v := range m {
-			newBody[k] = v
-		}
-	}
-
-	//transformerOption := make(map[string]bool)
+	//create new body
+	newBody["client_id"] = a.config.ClientId
+	newBody["client_secret"] = a.config.ClientSecret
+	newBody["grant_type"] = a.config.GrantType
 
 	// add headers to new body
-	usernameHeader, okUser := req.Header["username"]
-	if !okUser {
+	usernameHeader := req.Header.Get("username")
+	passwordHeader := req.Header.Get("password")
+
+	if usernameHeader == "" {
 		http.Error(rw, "username header missing", http.StatusInternalServerError)
 	}
-	newBody["username"] = usernameHeader[0]
+	newBody["username"] = usernameHeader
+	req.Header.Del("username")
 
-	passwordHeader, okPass := req.Header["password"]
-	if !okPass {
+	if passwordHeader == "" {
 		http.Error(rw, "password header missing", http.StatusInternalServerError)
 	}
-	newBody["password"] = passwordHeader[0]
+	newBody["password"] = passwordHeader
+	req.Header.Del("password")
 
-	req.Header.Set("Content-Type", a.newContentType)
-
-	//reqBody, err := io.ReadAll(req.Body)
-	//if err != nil {
-	//	a.log(err.Error())
-	//
-	//	http.Error(rw, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-
+	req.Header.Set("Content-Type", a.config.NewContentType)
 	jsonBody, err := json.Marshal(newBody)
 
 	if err != nil {
@@ -126,57 +98,6 @@ func (a *transformer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	req.Body = io.NopCloser(strings.NewReader(string(jsonBody)))
 	req.ContentLength = int64(len(jsonBody))
-
-	//reqBody, err := io.ReadAll(req.Body)
-	//
-	//if err != nil {
-	//	a.log(err.Error())
-	//
-	//	http.Error(rw, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-
-	//reqBodyJson, err := json.Marshal(reqBody)
-	//for k, v := range reqBodyJson {
-	//	newBody[string(k)] = string(v)
-	//}
-
-	//}
-
-	//if param := req.URL.Query().Get(a.transformerQueryParameterName); len(param) > 0 {
-	//	for _, opt := range strings.Split(strings.ToLower(param), "|") {
-	//		transformerOption[opt] = true
-	//	}
-	//}
-	//
-	//if transformerOption["body"] {
-	//	reqBody, err := io.ReadAll(req.Body)
-	//	if err != nil {
-	//		a.log(err.Error())
-	//
-	//		http.Error(rw, err.Error(), http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	jsonBody, err := json.Marshal(map[string]string{
-	//		a.jsonTransformFieldName: string(reqBody),
-	//	})
-	//	if err != nil {
-	//		a.log(err.Error())
-	//
-	//		http.Error(rw, err.Error(), http.StatusInternalServerError)
-	//		return
-	//	}
-	//	req.Body = io.NopCloser(strings.NewReader(string(jsonBody)))
-	//	req.ContentLength = int64(len(jsonBody))
-	//}
-	//if transformerOption["json"] {
-	//	req.Header.Set("Content-Type", "application/json")
-	//}
-	//if transformerOption["bearer"] {
-	//	token := req.URL.Query().Get(a.tokenTransformQueryParameterFieldName)
-	//	req.Header.Set("Authorization", "Bearer "+token)
-	//}
 
 	a.next.ServeHTTP(rw, req)
 }
