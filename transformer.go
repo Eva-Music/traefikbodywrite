@@ -76,12 +76,14 @@ func (a *transformer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "username header missing", http.StatusInternalServerError)
 	}
 	newBody["username"] = usernameHeader
+	req.Header.Del("username")
 
 	passwordHeader := req.Header.Values("password")[0]
 	if passwordHeader == "" {
 		http.Error(rw, "password header missing", http.StatusInternalServerError)
 	}
 	newBody["password"] = passwordHeader
+	req.Header.Del("password")
 
 	req.Header.Set("Content-Type", a.config.NewContentType)
 	jsonBody, err := json.Marshal(newBody)
