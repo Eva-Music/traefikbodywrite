@@ -1,37 +1,27 @@
-// Package traefikbodywrite plugin.
 package traefikbodywrite
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
-	"strings"
+	"strconv"
 )
-
-// Config the plugin configuration.
-
-//type NewBody struct {
-//	NewKey   string `json:"newKey,omitempty"`
-//	NewValue string `json:"newValue,omitempty"`
-//}
 
 type Config struct {
 	//NewBodyContent []NewBody
-	NewContentType string `json:"newContentType,omitempty"`
-	ClientId       string `json:"clientId,omitempty"`
-	ClientSecret   string `json:"clientSecret,omitempty"`
-	GrantType      string `json:"grantType,omitempty"`
+	ClientId     string `json:"clientId,omitempty"`
+	ClientSecret string `json:"clientSecret,omitempty"`
+	GrantType    string `json:"grantType,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
-	return &Config{
-		//NewBodyContent: []NewBody{},
-		NewContentType: "application/x-www-form-urlencoded",
-	}
+	return &Config{}
 }
 
 // transformer plugin.
@@ -59,43 +49,42 @@ func (a *transformer) log(format string) {
 	}
 }
 
-//newBodyContent:
-//   - newKey: "client_id"
-//     newValue: SerialNumber%3D
-
 func (a *transformer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	newBody := make(map[string]string)
+	data := url.Values{}
 
-	//create new body
-	newBody["client_id"] = a.config.ClientId
-	newBody["client_secret"] = a.config.ClientSecret
-	newBody["grant_type"] = a.config.GrantType
+	data.Set("client_id", a.config.ClientId)
+	data.Set("client_secret", a.config.ClientSecret)
+	data.Set("grant_type", a.config.GrantType)
 
 	usernameHeader := req.Header.Values("username")[0]
 	if usernameHeader == "" {
 		http.Error(rw, "username header missing", http.StatusInternalServerError)
 	}
-	newBody["username"] = usernameHeader
+	data.Set("username", usernameHeader)
 	req.Header.Del("username")
 
 	passwordHeader := req.Header.Values("password")[0]
 	if passwordHeader == "" {
 		http.Error(rw, "password header missing", http.StatusInternalServerError)
 	}
-	newBody["password"] = passwordHeader
+	data.Set("password", passwordHeader)
 	req.Header.Del("password")
 
-	req.Header.Set("Content-Type", a.config.NewContentType)
-	jsonBody, err := json.Marshal(newBody)
+	var body io.Reader
+	body = bytes.NewBufferString(data.Encode())
 
-	if err != nil {
-		a.log(err.Error())
-		http.Error(rw, "can't make json body", http.StatusInternalServerError)
-		return
+	rc, ok := body.(io.ReadCloser)
+	if !ok && body != nil {
+		rc = ioutil.NopCloser(body)
 	}
 
-	req.Body = io.NopCloser(strings.NewReader(string(jsonBody)))
-	req.ContentLength = int64(len(jsonBody))
+	req.Body = rc
+
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+
+	//req.Body = io.NopCloser(strings.NewReader(string(jsonBody)))
+	//req.ContentLength = int64(len(jsonBody))
 
 	a.next.ServeHTTP(rw, req)
 }
