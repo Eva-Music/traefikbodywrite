@@ -1,11 +1,9 @@
 package traefikbodywrite
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -52,38 +50,32 @@ func (a *transformer) log(format string) {
 func (a *transformer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	data := url.Values{}
 
-	data.Set("client_id", a.config.ClientId)
-	data.Set("client_secret", a.config.ClientSecret)
-	data.Set("grant_type", a.config.GrantType)
+	data.Add("client_id", a.config.ClientId)
+	data.Add("client_secret", a.config.ClientSecret)
+	data.Add("grant_type", a.config.GrantType)
 
 	usernameHeader := req.Header.Values("username")[0]
 	if usernameHeader == "" {
 		http.Error(rw, "username header missing", http.StatusInternalServerError)
 	}
-	data.Set("username", usernameHeader)
+	data.Add("username", usernameHeader)
 	req.Header.Del("username")
 
 	passwordHeader := req.Header.Values("password")[0]
 	if passwordHeader == "" {
 		http.Error(rw, "password header missing", http.StatusInternalServerError)
 	}
-	data.Set("password", passwordHeader)
+	data.Add("password", passwordHeader)
 	req.Header.Del("password")
 
-	var body io.Reader
-	body = bytes.NewBufferString(data.Encode())
+	log.Print(data)
 
-	rc, ok := body.(io.ReadCloser)
-	if !ok && body != nil {
-		rc = ioutil.NopCloser(body)
-	}
+	req.URL.RawQuery = data.Encode()
 
-	req.Body = rc
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Content-Length", strconv.Itoa(len(data.Encode())))
 
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
-
-	//req.Body = io.NopCloser(strings.NewReader(string(jsonBody)))
+	//req.Body = io.NopCloser(strings.NewReader(data))
 	//req.ContentLength = int64(len(jsonBody))
 
 	a.next.ServeHTTP(rw, req)
