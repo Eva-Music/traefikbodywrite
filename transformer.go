@@ -3,7 +3,6 @@ package traefikbodywrite
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -67,8 +66,6 @@ func (a *transformer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 	data.Add("password", passwordHeader)
 	req.Header.Del("password")
-
-	log.Print(data)
 
 	req.URL.RawQuery = data.Encode()
 
