@@ -5,6 +5,6 @@
     plugin:
       traefikbodywrite:
           clientId:       "client_id"
-          clientSecret:   "client_sexret"
+          clientSecret:   "client_secret"
           grantType:      "password"
 ```
